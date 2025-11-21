@@ -3,11 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Snake Game</title>
+<title>Snake Game – Fixes Feld + Quadrate</title>
 
 <style>
     body {
-        margin: 0;
         background: #111;
         color: white;
         font-family: Arial, sans-serif;
@@ -17,6 +16,8 @@
     }
 
     #gameCanvas {
+        width: 99%;
+        height: 700px;  /* BLEIBT GROSS */
         background: #222;
         margin-top: 20px;
         border: 3px solid #4ea8ff;
@@ -32,8 +33,6 @@
 </head>
 <body>
 
-<h1>Snake Game</h1>
-<h2>Alex Version</h2>
 <canvas id="gameCanvas"></canvas>
 <div id="score">Score: 0</div>
 
@@ -44,17 +43,25 @@ const ctx = canvas.getContext("2d");
 let tileCount = 20;
 let tileSize;
 
-// Größe an Bildschirm anpassen
+// ===================================
+// CANVAS BLEIBT GLEICH, QUADRATE FIX
+// ===================================
 function resize() {
-    let minSide = Math.min(window.innerWidth, window.innerHeight * 0.8);
-    canvas.width = minSide;
-    canvas.height = minSide;
-    tileSize = canvas.width / tileCount;
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
+
+    // Quadratische Spielfelder
+    tileSize = Math.min(
+        canvas.width / tileCount,
+        canvas.height / tileCount
+    );
 }
 resize();
 window.addEventListener("resize", resize);
 
-// Snake Startposition
+// ===================================
+// VARIABLEN
+// ===================================
 let snakeX = 10;
 let snakeY = 10;
 let velocityX = 0;
@@ -63,76 +70,93 @@ let velocityY = 0;
 let snake = [];
 let snakeLength = 3;
 
-// Essen
 let foodX = 5;
 let foodY = 5;
 
-// Score
 let score = 0;
 
-// Game Loop
-let speed = 8;   // HIER SCHNELLER ODER LANGSAMER MACHEN! (Empfohlen: 5–20)
+// ===================================
+// >>>>>> SNAKE SPEED HIER ÄNDERN <<<<<<
+// ===================================
+let speed = 9;   // <<< HIER ÄNDERN: z.B. 5 langsam, 12 schnell, 20 sehr schnell
+// ===================================
 
+
+// ===================================
+// GAME LOOP
+// ===================================
 function game() {
     setTimeout(() => {
         requestAnimationFrame(game);
         update();
         draw();
-    }, 1000 / speed);
+    }, 1000 / speed);   // ← Speed wird HIER benutzt
 }
-
 game();
 
+// ===================================
+// UPDATE
+// ===================================
 function update() {
     snakeX += velocityX;
     snakeY += velocityY;
 
-    // Snake teleportiert durch Wände (kann man ausschalten)
+    // Teleport an Rändern
     if (snakeX < 0) snakeX = tileCount - 1;
-    if (snakeX > tileCount - 1) snakeX = 0;
+    if (snakeX >= tileCount) snakeX = 0;
     if (snakeY < 0) snakeY = tileCount - 1;
-    if (snakeY > tileCount - 1) snakeY = 0;
+    if (snakeY >= tileCount) snakeY = 0;
 
-    // Snake Körper aktualisieren
     snake.push({ x: snakeX, y: snakeY });
-    while (snake.length > snakeLength) {
-        snake.shift();
-    }
+    while (snake.length > snakeLength) snake.shift();
 
-    // Kollision mit sich selbst
+    // Selbstkollision
     for (let i = 0; i < snake.length - 1; i++) {
-        if (snake[i].x === snakeX && snake[i].y === snakeY) {
-            resetGame();
-        }
+        if (snake[i].x === snakeX && snake[i].y === snakeY) resetGame();
     }
 
-    // Essen gefressen?
+    // Essen
     if (snakeX === foodX && snakeY === foodY) {
         snakeLength++;
         score++;
         document.getElementById("score").textContent = "Score: " + score;
 
-        // Neues Essen
         foodX = Math.floor(Math.random() * tileCount);
         foodY = Math.floor(Math.random() * tileCount);
     }
 }
 
+// ===================================
+// ZEICHNEN
+// ===================================
 function draw() {
     ctx.fillStyle = "#222";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Snake zeichnen
+    // Snake (quadratisch)
     ctx.fillStyle = "#4ea8ff";
-    snake.forEach(part => {
-        ctx.fillRect(part.x * tileSize, part.y * tileSize, tileSize - 2, tileSize - 2);
+    snake.forEach(p => {
+        ctx.fillRect(
+            p.x * tileSize,
+            p.y * tileSize,
+            tileSize - 2,
+            tileSize - 2
+        );
     });
 
-    // Essen zeichnen
+    // Essen (quadratisch)
     ctx.fillStyle = "lime";
-    ctx.fillRect(foodX * tileSize, foodY * tileSize, tileSize - 2, tileSize - 2);
+    ctx.fillRect(
+        foodX * tileSize,
+        foodY * tileSize,
+        tileSize - 2,
+        tileSize - 2
+    );
 }
 
+// ===================================
+// RESET
+// ===================================
 function resetGame() {
     snakeX = 10;
     snakeY = 10;
@@ -144,9 +168,9 @@ function resetGame() {
     document.getElementById("score").textContent = "Score: 0";
 }
 
-// =====================
-// STEUERUNG PC (PFEILE)
-// =====================
+// ===================================
+// TASTATUR STEUERUNG
+// ===================================
 document.addEventListener("keydown", e => {
     if (e.key === "ArrowUp" && velocityY !== 1) {
         velocityX = 0; velocityY = -1;
@@ -162,9 +186,9 @@ document.addEventListener("keydown", e => {
     }
 });
 
-// =========================
-// TOUCH & WISCH-STEUERUNG
-// =========================
+// ===================================
+// TOUCH STEUERUNG
+// ===================================
 let startX = 0, startY = 0;
 
 canvas.addEventListener("touchstart", e => {
@@ -177,19 +201,11 @@ canvas.addEventListener("touchmove", e => {
     let dy = e.touches[0].clientY - startY;
 
     if (Math.abs(dx) > Math.abs(dy)) {
-        // Horizontal
-        if (dx > 0 && velocityX !== -1) {
-            velocityX = 1; velocityY = 0;
-        } else if (dx < 0 && velocityX !== 1) {
-            velocityX = -1; velocityY = 0;
-        }
+        if (dx > 0 && velocityX !== -1) velocityX = 1, velocityY = 0;
+        else if (dx < 0 && velocityX !== 1) velocityX = -1, velocityY = 0;
     } else {
-        // Vertikal
-        if (dy > 0 && velocityY !== -1) {
-            velocityX = 0; velocityY = 1;
-        } else if (dy < 0 && velocityY !== 1) {
-            velocityX = 0; velocityY = -1;
-        }
+        if (dy > 0 && velocityY !== -1) velocityX = 0, velocityY = 1;
+        else if (dy < 0 && velocityY !== 1) velocityX = 0, velocityY = -1;
     }
 
     startX = e.touches[0].clientX;
