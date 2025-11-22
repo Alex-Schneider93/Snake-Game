@@ -69,15 +69,15 @@ html, body {
 
 <body>
 
-<!-- FIX VH -->
+<!-- 🔥 100% sicherer Höhe-Fix (visualViewport) -->
 <script>
 function fixVH() {
-    document.documentElement.style.setProperty(
-        "--vh",
-        window.innerHeight * 0.01 + "px"
-    );
+    const realVH = (window.visualViewport ? window.visualViewport.height : window.innerHeight) * 0.01;
+    document.documentElement.style.setProperty("--vh", `${realVH}px`);
 }
 fixVH();
+
+window.visualViewport?.addEventListener("resize", fixVH);
 window.addEventListener("resize", fixVH);
 </script>
 
@@ -135,7 +135,7 @@ function update() {
     snakeX += velocityX;
     snakeY += velocityY;
 
-    /* Borders WRAP */
+    // Wrap around
     if (snakeX < 0) snakeX = tileCount - 1;
     if (snakeX >= tileCount) snakeX = 0;
     if (snakeY < 0) snakeY = tileCount - 1;
@@ -144,25 +144,22 @@ function update() {
     snake.push({ x: snakeX, y: snakeY });
     while (snake.length > snakeLength) snake.shift();
 
-    /* COLLISION */
-    for (let i=0;i<snake.length-1;i++)
-        if(snake[i].x===snakeX && snake[i].y===snakeY)
+    // Collision → Reset (Score bleibt stehen!)
+    for (let i = 0; i < snake.length - 1; i++)
+        if (snake[i].x === snakeX && snake[i].y === snakeY)
             resetGame();
 
-    /* EAT FOOD */
+    // Essen
     if (snakeX === foodX && snakeY === foodY) {
         snakeLength++;
         score++;
 
-        /* Update highscore */
         if (score > highscore) {
             highscore = score;
             localStorage.setItem("snakeHighscore", highscore);
         }
-
         updateScorebar();
 
-        /* New Food */
         foodX = Math.floor(Math.random() * tileCount);
         foodY = Math.floor(Math.random() * tileCount);
     }
@@ -180,7 +177,7 @@ function draw() {
     const radius = size * 0.15;
 
     g.fillStyle = "#c6ffb3";
-    g.fillRect(0,0,gameCanvas.width,gameCanvas.height);
+    g.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
 
     // Snake
     g.fillStyle = "#2e2e2e";
@@ -212,7 +209,7 @@ function draw() {
     g.fill();
 }
 
-/* RESET (Score bleibt stehen!) */
+/* RESET – Score bleibt stehen */
 function resetGame() {
     snakeX = 10;
     snakeY = 10;
@@ -220,8 +217,6 @@ function resetGame() {
     velocityY = 0;
     snake = [];
     snakeLength = 3;
-
-    /* Score NICHT zurücksetzen! */
     updateScorebar();
 }
 
@@ -236,20 +231,21 @@ function resizeCtrl() {
 }
 resizeCtrl();
 
-function drawArrow(x,y,size,angle){
+/* Draw arrows */
+function drawArrow(x, y, size, angle){
     c.save();
-    c.translate(x,y);
+    c.translate(x, y);
     c.rotate(angle);
 
-    c.lineWidth=size*0.22;
-    c.lineJoin="round";
-    c.strokeStyle="#000";
+    c.lineWidth = size * 0.22;
+    c.lineJoin = "round";
+    c.strokeStyle = "#000";
 
     c.beginPath();
-    c.moveTo(0,-size);
-    c.lineTo(-size*0.55,size*0.35);
-    c.lineTo(0,-size*0.1);
-    c.lineTo(size*0.55,size*0.35);
+    c.moveTo(0, -size);
+    c.lineTo(-size*0.55, size*0.35);
+    c.lineTo(0, -size*0.1);
+    c.lineTo(size*0.55, size*0.35);
     c.closePath();
     c.stroke();
 
@@ -260,10 +256,9 @@ function drawControls(){
     c.fillStyle="#c6ffb3";
     c.fillRect(0,0,ctrlCanvas.width,ctrlCanvas.height);
 
-    let cx=ctrlCanvas.width/2;
-    let cy=ctrlCanvas.height/2;
-
-    let size=ctrlCanvas.height*0.18;
+    let cx = ctrlCanvas.width / 2;
+    let cy = ctrlCanvas.height / 2;
+    let size = ctrlCanvas.height * 0.18;
 
     drawArrow(cx, cy-size*1.3, size, 0);
     drawArrow(cx, cy+size*1.3, size, Math.PI);
@@ -271,45 +266,56 @@ function drawControls(){
     drawArrow(cx+size*1.9, cy, size, Math.PI/2);
 }
 
-/* TOUCH CONTROL + Score Reset nur bei NEUEM Spiel */
-ctrlCanvas.addEventListener("touchstart", e=>{
-    let r=ctrlCanvas.getBoundingClientRect();
-    let x=e.touches[0].clientX-r.left;
-    let y=e.touches[0].clientY-r.top;
-
-    let cx=ctrlCanvas.width/2;
-    let cy=ctrlCanvas.height/2;
+/* Gemeinsame Steuerung (Touch + Maus) */
+function handleControlInput(x, y) {
+    let cx = ctrlCanvas.width / 2;
+    let cy = ctrlCanvas.height / 2;
 
     let oldVX = velocityX;
     let oldVY = velocityY;
 
-    if(y<cy-ctrlCanvas.height*0.18 && velocityY!==1)
-        velocityX=0,velocityY=-1;
-    else if(y>cy+ctrlCanvas.height*0.18 && velocityY!==-1)
-        velocityX=0,velocityY=1;
-    else if(x<cx-ctrlCanvas.width*0.18 && velocityX!==1)
-        velocityX=-1,velocityY=0;
-    else if(x>cx+ctrlCanvas.width*0.18 && velocityX!==-1)
-        velocityX=1,velocityY=0;
+    if (y < cy - ctrlCanvas.height * 0.18 && velocityY !== 1)
+        velocityX = 0, velocityY = -1;
+    else if (y > cy + ctrlCanvas.height * 0.18 && velocityY !== -1)
+        velocityX = 0, velocityY = 1;
+    else if (x < cx - ctrlCanvas.width * 0.18 && velocityX !== 1)
+        velocityX = -1, velocityY = 0;
+    else if (x > cx + ctrlCanvas.width * 0.18 && velocityX !== -1)
+        velocityX = 1, velocityY = 0;
 
-    // Nur wenn Snake vorher stillstand → Score neu
-    if (oldVX===0 && oldVY===0 && (velocityX!==0 || velocityY!==0)) {
+    // Score Reset nur beim ersten Move des neuen Spiels
+    if (oldVX === 0 && oldVY === 0 && (velocityX !== 0 || velocityY !== 0)) {
         score = 0;
         updateScorebar();
     }
+}
+
+/* Touch */
+ctrlCanvas.addEventListener("touchstart", e=>{
+    let r = ctrlCanvas.getBoundingClientRect();
+    let x = e.touches[0].clientX - r.left;
+    let y = e.touches[0].clientY - r.top;
+    handleControlInput(x, y);
 });
 
-/* KEYBOARD CONTROL */
-document.addEventListener("keydown",e=>{
+/* Maus */
+ctrlCanvas.addEventListener("mousedown", e=>{
+    let r = ctrlCanvas.getBoundingClientRect();
+    let x = e.clientX - r.left;
+    let y = e.clientY - r.top;
+    handleControlInput(x, y);
+});
+
+/* KEYBOARD */
+document.addEventListener("keydown", e=>{
     let oldVX = velocityX;
     let oldVY = velocityY;
 
-    if(e.key==="ArrowUp"&&velocityY!==1)velocityX=0,velocityY=-1;
-    if(e.key==="ArrowDown"&&velocityY!==-1)velocityX=0,velocityY=1;
-    if(e.key==="ArrowLeft"&&velocityX!==1)velocityX=-1,velocityY=0;
-    if(e.key==="ArrowRight"&&velocityX!==-1)velocityX=1,velocityY=0;
+    if(e.key === "ArrowUp" && velocityY !== 1) velocityX=0, velocityY=-1;
+    if(e.key === "ArrowDown" && velocityY !== -1) velocityX=0, velocityY=1;
+    if(e.key === "ArrowLeft" && velocityX !== 1) velocityX=-1, velocityY=0;
+    if(e.key === "ArrowRight" && velocityX !== -1) velocityX=1, velocityY=0;
 
-    // Score nur zu Beginn eines neuen Spiels setzen
     if (oldVX===0 && oldVY===0 && (velocityX!==0 || velocityY!==0)) {
         score = 0;
         updateScorebar();
