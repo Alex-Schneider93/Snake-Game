@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Snake Retro LCD – Fullscreen Responsive</title>
+<title>Snake Game</title>
 
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -17,11 +17,11 @@ html, body {
     font-family: monospace;
 }
 
-/* FULL WIDTH + AUTO HEIGHT */
+/* WRAPPER */
 #wrapper {
     width: 100%;
     max-width: 100%;
-    height: 85vh;
+    height: calc(var(--vh) * 85);
     background: #bfeab3;
     border: 4px solid #121510;
     border-radius: 15px;
@@ -32,7 +32,7 @@ html, body {
 
 /* SCOREBAR */
 #scorebar {
-    height: 6vh;
+    height: calc(var(--vh) * 6);
     display:flex;
     justify-content:center;
     align-items:center;
@@ -42,34 +42,47 @@ html, body {
     color:#000;
 }
 
-/* HORIZONTAL LINE */
+/* LINE */
 #divider {
     width:100%;
-    height:0.5vh;
+    height: calc(var(--vh) * 0.5);
     background:#10120f;
 }
 
-/* GAME FIELD – FULL WIDTH */
+/* GAME CANVAS */
 #gameCanvas {
     width:100%;
-    height:48vh;
+    height: calc(var(--vh) * 48);
     background:#e5f2e0;
     border-bottom:3px solid #0a0c08;
     image-rendering: pixelated;
 }
 
-/* CONTROL FIELD – FULL WIDTH */
+/* CONTROL CANVAS */
 #ctrlCanvas {
     width:100%;
-    height:25vh;
+    height: calc(var(--vh) * 25);
     background:#405138;
 }
 </style>
 </head>
 
 <body>
+
+<!-- FIX VH (HANDY ORIENTIERUNG BUG) -->
+<script>
+function fixVH() {
+    document.documentElement.style.setProperty(
+        "--vh",
+        window.innerHeight * 0.01 + "px"
+    );
+}
+fixVH();
+window.addEventListener("resize", fixVH);
+</script>
+
 <div id="wrapper">
-    <div id="scorebar">Score: 0 | Highscore: 0</div>
+    <div id="scorebar">Score: 0 | Run: 0 | Highscore: 0</div>
     <div id="divider"></div>
 
     <canvas id="gameCanvas"></canvas>
@@ -77,7 +90,7 @@ html, body {
 </div>
 
 <script>
-/* ---------------- GAME CANVAS ---------------- */
+/* ----------- GAME CANVAS ----------- */
 const gameCanvas = document.getElementById("gameCanvas");
 const g = gameCanvas.getContext("2d");
 
@@ -96,11 +109,15 @@ let snakeLength = 3;
 
 let foodX = 5, foodY = 5;
 
-let score = 0;
+let runScore = 0;  // Score während laufendem Spiel
+let totalScore = 0; // Summe aller Punkte über mehrere Spiele
 let highscore = Number(localStorage.getItem("snakeHighscore")) || 0;
 
-document.getElementById("scorebar").textContent =
-  "Score: 0 | Highscore: " + highscore;
+function updateScorebar() {
+    document.getElementById("scorebar").textContent =
+    `Score: ${totalScore} | Run: ${runScore} | Highscore: ${highscore}`;
+}
+updateScorebar();
 
 let speed = 7;
 
@@ -133,15 +150,15 @@ function update() {
 
     if (snakeX === foodX && snakeY === foodY) {
         snakeLength++;
-        score++;
+        runScore++;
+        totalScore++;
 
-        if (score > highscore) {
-            highscore = score;
+        if (totalScore > highscore) {
+            highscore = totalScore;
             localStorage.setItem("snakeHighscore", highscore);
         }
 
-        document.getElementById("scorebar").textContent =
-        "Score: " + score + " | Highscore: " + highscore;
+        updateScorebar();
 
         foodX = Math.floor(Math.random() * tileCount);
         foodY = Math.floor(Math.random() * tileCount);
@@ -155,14 +172,14 @@ function draw() {
         gameCanvas.clientHeight / tileCount
     );
 
-    const gap = tileSize * 0.12;      // spacing
-    const size = tileSize - gap * 2;  // snake smaller
-    const radius = size * 0.15;       // light rounding
+    const gap = tileSize * 0.12;
+    const size = tileSize - gap * 2;
+    const radius = size * 0.15;
 
     g.fillStyle = "#c6ffb3";
     g.fillRect(0,0,gameCanvas.width,gameCanvas.height);
 
-    /* Snake – dark grey with light rounding */
+    // Snake
     g.fillStyle = "#2e2e2e";
     snake.forEach(p => {
         g.beginPath();
@@ -176,15 +193,15 @@ function draw() {
         g.fill();
     });
 
-    /* Food – same color, smaller, rounded */
+    // Food
     const foodSize = size * 0.7;
     const foodRadius = foodSize * 0.15;
-    const foodOffset = (tileSize - foodSize) / 2;
+    const offset = (tileSize - foodSize) / 2;
 
     g.beginPath();
     g.roundRect(
-        foodX * tileSize + foodOffset,
-        foodY * tileSize + foodOffset,
+        foodX * tileSize + offset,
+        foodY * tileSize + offset,
         foodSize,
         foodSize,
         foodRadius
@@ -192,18 +209,18 @@ function draw() {
     g.fill();
 }
 
+/* RESET */
 function resetGame() {
     snakeX=10; snakeY=10;
     velocityX=0; velocityY=0;
     snake=[];
     snakeLength=3;
-    score=0;
 
-    document.getElementById("scorebar").textContent =
-       "Score: 0 | Highscore: " + highscore;
+    runScore = 0;  // aktueller Run zurücksetzen
+    updateScorebar();
 }
 
-/* ---------------- CONTROLS ---------------- */
+/* ----------- CONTROLS ----------- */
 const ctrlCanvas = document.getElementById("ctrlCanvas");
 const c = ctrlCanvas.getContext("2d");
 
@@ -214,7 +231,6 @@ function resizeCtrl() {
 }
 resizeCtrl();
 
-/* ARROWS */
 function drawArrow(x,y,size,angle){
     c.save();
     c.translate(x,y);
@@ -269,7 +285,7 @@ ctrlCanvas.addEventListener("touchstart", e=>{
         velocityX=1,velocityY=0;
 });
 
-/* KEYBOARD CONTROL */
+/* KEYBOARD */
 document.addEventListener("keydown",e=>{
     if(e.key==="ArrowUp"&&velocityY!==1)velocityX=0,velocityY=-1;
     if(e.key==="ArrowDown"&&velocityY!==-1)velocityX=0,velocityY=1;
