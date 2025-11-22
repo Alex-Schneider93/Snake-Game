@@ -69,7 +69,7 @@ html, body {
 
 <body>
 
-<!-- FIX VH (HANDY ORIENTIERUNG BUG) -->
+<!-- FIX VH -->
 <script>
 function fixVH() {
     document.documentElement.style.setProperty(
@@ -82,7 +82,7 @@ window.addEventListener("resize", fixVH);
 </script>
 
 <div id="wrapper">
-    <div id="scorebar">Score: 0 | Run: 0 | Highscore: 0</div>
+    <div id="scorebar">Score: 0 | Highscore: 0</div>
     <div id="divider"></div>
 
     <canvas id="gameCanvas"></canvas>
@@ -109,13 +109,12 @@ let snakeLength = 3;
 
 let foodX = 5, foodY = 5;
 
-let runScore = 0;  // Score während laufendem Spiel
-let totalScore = 0; // Summe aller Punkte über mehrere Spiele
+let score = 0;
 let highscore = Number(localStorage.getItem("snakeHighscore")) || 0;
 
 function updateScorebar() {
     document.getElementById("scorebar").textContent =
-    `Score: ${totalScore} | Run: ${runScore} | Highscore: ${highscore}`;
+    `Score: ${score} | Highscore: ${highscore}`;
 }
 updateScorebar();
 
@@ -136,6 +135,7 @@ function update() {
     snakeX += velocityX;
     snakeY += velocityY;
 
+    /* Borders WRAP */
     if (snakeX < 0) snakeX = tileCount - 1;
     if (snakeX >= tileCount) snakeX = 0;
     if (snakeY < 0) snakeY = tileCount - 1;
@@ -144,22 +144,25 @@ function update() {
     snake.push({ x: snakeX, y: snakeY });
     while (snake.length > snakeLength) snake.shift();
 
+    /* COLLISION */
     for (let i=0;i<snake.length-1;i++)
         if(snake[i].x===snakeX && snake[i].y===snakeY)
             resetGame();
 
+    /* EAT FOOD */
     if (snakeX === foodX && snakeY === foodY) {
         snakeLength++;
-        runScore++;
-        totalScore++;
+        score++;
 
-        if (totalScore > highscore) {
-            highscore = totalScore;
+        /* Update highscore */
+        if (score > highscore) {
+            highscore = score;
             localStorage.setItem("snakeHighscore", highscore);
         }
 
         updateScorebar();
 
+        /* New Food */
         foodX = Math.floor(Math.random() * tileCount);
         foodY = Math.floor(Math.random() * tileCount);
     }
@@ -209,14 +212,16 @@ function draw() {
     g.fill();
 }
 
-/* RESET */
+/* RESET (Score bleibt stehen!) */
 function resetGame() {
-    snakeX=10; snakeY=10;
-    velocityX=0; velocityY=0;
-    snake=[];
-    snakeLength=3;
+    snakeX = 10;
+    snakeY = 10;
+    velocityX = 0;
+    velocityY = 0;
+    snake = [];
+    snakeLength = 3;
 
-    runScore = 0;  // aktueller Run zurücksetzen
+    /* Score NICHT zurücksetzen! */
     updateScorebar();
 }
 
@@ -266,7 +271,7 @@ function drawControls(){
     drawArrow(cx+size*1.9, cy, size, Math.PI/2);
 }
 
-/* TOUCH CONTROL */
+/* TOUCH CONTROL + Score Reset nur bei NEUEM Spiel */
 ctrlCanvas.addEventListener("touchstart", e=>{
     let r=ctrlCanvas.getBoundingClientRect();
     let x=e.touches[0].clientX-r.left;
@@ -274,6 +279,9 @@ ctrlCanvas.addEventListener("touchstart", e=>{
 
     let cx=ctrlCanvas.width/2;
     let cy=ctrlCanvas.height/2;
+
+    let oldVX = velocityX;
+    let oldVY = velocityY;
 
     if(y<cy-ctrlCanvas.height*0.18 && velocityY!==1)
         velocityX=0,velocityY=-1;
@@ -283,14 +291,29 @@ ctrlCanvas.addEventListener("touchstart", e=>{
         velocityX=-1,velocityY=0;
     else if(x>cx+ctrlCanvas.width*0.18 && velocityX!==-1)
         velocityX=1,velocityY=0;
+
+    // Nur wenn Snake vorher stillstand → Score neu
+    if (oldVX===0 && oldVY===0 && (velocityX!==0 || velocityY!==0)) {
+        score = 0;
+        updateScorebar();
+    }
 });
 
-/* KEYBOARD */
+/* KEYBOARD CONTROL */
 document.addEventListener("keydown",e=>{
+    let oldVX = velocityX;
+    let oldVY = velocityY;
+
     if(e.key==="ArrowUp"&&velocityY!==1)velocityX=0,velocityY=-1;
     if(e.key==="ArrowDown"&&velocityY!==-1)velocityX=0,velocityY=1;
     if(e.key==="ArrowLeft"&&velocityX!==1)velocityX=-1,velocityY=0;
     if(e.key==="ArrowRight"&&velocityX!==-1)velocityX=1,velocityY=0;
+
+    // Score nur zu Beginn eines neuen Spiels setzen
+    if (oldVX===0 && oldVY===0 && (velocityX!==0 || velocityY!==0)) {
+        score = 0;
+        updateScorebar();
+    }
 });
 </script>
 
