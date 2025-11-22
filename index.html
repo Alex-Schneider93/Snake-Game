@@ -3,49 +3,52 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Nokia LCD Snake – Touch Fixed</title>
+<title>Snake Game</title>
 
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 html, body {
+    width: 100%;
     height: 100%;
     background: #1a1f1a;
+    font-family: monospace;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-family: monospace;
 }
 
-/* Display Container */
+/* Hauptcontainer */
 #display {
-    width: 92vw;
-    max-width: 430px;
-    height: 88vh;
+    width: 100vw;
+    max-width: 480px;
+    height: 100vh;
     background: #2d3a2d;
-    border: 6px solid #252d25;
-    border-radius: 14px;
+    border: 5px solid #252d25;
+    border-radius: 12px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
 }
 
-/* LCD Bereich */
+/* LCD-Bereich oben (70%) */
 #screen {
-    flex: 1;
+    flex: 7;
     background: #c6ffb3;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
+/* Score */
 #scorebar {
-    height: 36px;
+    height: 40px;
     background: #b1eaa2;
     border-bottom: 2px solid #88c98a;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-weight: bold;
+    font-size: 18px;
 }
 
 #divider {
@@ -53,17 +56,17 @@ html, body {
     background: #88c98a;
 }
 
-/* Snake Spielfeld */
+/* Snake Feld nimmt den Rest */
 #gameCanvas {
+    flex: 1;
     width: 100%;
-    height: calc(100% - 39px);
     background: #c6ffb3;
     image-rendering: pixelated;
 }
 
-/* Steuerfeld */
+/* Controller (30%) */
 #controls {
-    height: 22%;
+    flex: 3;
     background: #3c4440;
     border-top: 4px solid #252d25;
 }
@@ -75,18 +78,17 @@ html, body {
 }
 </style>
 </head>
+
 <body>
 
 <div id="display">
 
-    <!-- LCD -->
     <div id="screen">
         <div id="scorebar">Score: 0 | Highscore: 0</div>
         <div id="divider"></div>
         <canvas id="gameCanvas"></canvas>
     </div>
 
-    <!-- KEYPAD -->
     <div id="controls">
         <canvas id="ctrlCanvas"></canvas>
     </div>
@@ -94,32 +96,34 @@ html, body {
 </div>
 
 <script>
-/* ==============================
-   GAME CANVAS (Pixel Fix)
-============================== */
+/* ===============================
+   GAME CANVAS
+=============================== */
 const gameCanvas = document.getElementById("gameCanvas");
 const g = gameCanvas.getContext("2d");
 
 function resizeGame() {
-    gameCanvas.width = Math.floor(gameCanvas.clientWidth) + 2; 
+    gameCanvas.width = Math.floor(gameCanvas.clientWidth);
     gameCanvas.height = Math.floor(gameCanvas.clientHeight);
 }
 resizeGame();
 window.addEventListener("resize", () => { resizeGame(); resizeCtrl(); });
 
-/* ==============================
+/* ===============================
    SNAKE LOGIK
-============================== */
+=============================== */
+
 let tileCount = 20;
 let snakeX = 10, snakeY = 10;
 let velocityX = 0, velocityY = 0;
+
 let snake = [];
 let snakeLength = 3;
 
 let foodX = 5, foodY = 5;
 
 let score = 0;
-let highscore = Number(localStorage.getItem("lcdSnakeHighscore")) || 0;
+let highscore = Number(localStorage.getItem("AutoSnakeHS")) || 0;
 
 document.getElementById("scorebar").textContent =
 "Score: " + score + " | Highscore: " + highscore;
@@ -135,7 +139,6 @@ function gameLoop() {
 }
 gameLoop();
 
-/* UPDATE */
 function update() {
     snakeX += velocityX;
     snakeY += velocityY;
@@ -158,7 +161,7 @@ function update() {
 
         if (score > highscore) {
             highscore = score;
-            localStorage.setItem("lcdSnakeHighscore", highscore);
+            localStorage.setItem("AutoSnakeHS", highscore);
         }
 
         document.getElementById("scorebar").textContent =
@@ -169,15 +172,14 @@ function update() {
     }
 }
 
-/* DRAW */
 function draw() {
-    const tileSize = Math.min(
+    let tileSize = Math.min(
         gameCanvas.clientWidth / tileCount,
         gameCanvas.clientHeight / tileCount
     );
 
     g.fillStyle = "#c6ffb3";
-    g.fillRect(0, 0, gameCanvas.width + 2, gameCanvas.height);
+    g.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
 
     g.fillStyle = "#2d3a2d";
     snake.forEach(p => {
@@ -199,10 +201,8 @@ function draw() {
 }
 
 function resetGame() {
-    snakeX = 10;
-    snakeY = 10;
-    velocityX = 0;
-    velocityY = 0;
+    snakeX = 10; snakeY = 10;
+    velocityX = 0; velocityY = 0;
     snake = [];
     snakeLength = 3;
     score = 0;
@@ -211,9 +211,9 @@ function resetGame() {
     "Score: 0 | Highscore: " + highscore;
 }
 
-/* ==============================
-   CONTROLLER CANVAS (Touch FIX)
-============================== */
+/* ===============================
+   CONTROLLER CANVAS
+=============================== */
 const ctrlCanvas = document.getElementById("ctrlCanvas");
 const c = ctrlCanvas.getContext("2d");
 
@@ -227,7 +227,7 @@ function resizeCtrl() {
 }
 resizeCtrl();
 
-/* Pfeil-Zeichnung + Klickanimation */
+/* Zeichnet einen Pfeil */
 function drawArrow(x, y, s, angle, pressed) {
     c.save();
     c.translate(x, y);
@@ -248,13 +248,13 @@ function drawArrow(x, y, s, angle, pressed) {
     c.restore();
 }
 
-/* Zeichnet alle Pfeile */
 function drawControls() {
     c.fillStyle = "#3c4440";
     c.fillRect(0, 0, ctrlCanvas.width, ctrlCanvas.height);
 
     let cx = ctrlCanvas.width / 2;
     let cy = ctrlCanvas.height / 2;
+
     let s = ctrlCanvas.height * 0.20;
 
     drawArrow(cx, cy - s * 1.3, s, 0, pressedArrow === "up");
@@ -279,20 +279,17 @@ ctrlCanvas.addEventListener("touchstart", e => {
             velocityX = 0; velocityY = -1;
             pressedArrow = "up";
         }
-    }
-    else if (y > cy + threshold) {
+    } else if (y > cy + threshold) {
         if (velocityY !== -1) {
             velocityX = 0; velocityY = 1;
             pressedArrow = "down";
         }
-    }
-    else if (x < cx - threshold) {
+    } else if (x < cx - threshold) {
         if (velocityX !== 1) {
             velocityX = -1; velocityY = 0;
             pressedArrow = "left";
         }
-    }
-    else if (x > cx + threshold) {
+    } else if (x > cx + threshold) {
         if (velocityX !== -1) {
             velocityX = 1; velocityY = 0;
             pressedArrow = "right";
@@ -308,7 +305,7 @@ ctrlCanvas.addEventListener("touchstart", e => {
     }, 120);
 });
 
-/* PC Tastatur */
+/* KEYBOARD */
 document.addEventListener("keydown", e => {
     if (e.key === "ArrowUp" && velocityY !== 1) velocityX = 0, velocityY = -1;
     if (e.key === "ArrowDown" && velocityY !== -1) velocityX = 0, velocityY = 1;
