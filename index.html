@@ -2,9 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Snake Game</title>
 
 <style>
@@ -17,14 +15,13 @@ html, body {
     justify-content: center;
     align-items: center;
     font-family: monospace;
-    overflow: hidden;
 }
 
 /* WRAPPER */
 #wrapper {
     width: 100%;
-    height: calc(var(--vh) * 100);
     max-width: 100%;
+    height: calc(var(--vh) * 85);
     background: #bfeab3;
     border: 4px solid #121510;
     border-radius: 15px;
@@ -35,11 +32,11 @@ html, body {
 
 /* SCOREBAR */
 #scorebar {
-    height: calc(var(--vh) * 7);
+    height: calc(var(--vh) * 6);
     display:flex;
     justify-content:center;
     align-items:center;
-    font-size:min(6vw,15px);
+    font-size:min(5vw,28px);
     font-weight:bold;
     background:#7ef354;
     color:#000;
@@ -48,114 +45,61 @@ html, body {
 /* LINE */
 #divider {
     width:100%;
-    height: calc(var(--vh) * 0.8);
+    height: calc(var(--vh) * 0.5);
     background:#10120f;
 }
 
-/* SPIELFELD */
+/* GAME CANVAS */
 #gameCanvas {
-    width: 100%;
-    flex-grow: 1;
+    width:100%;
+    height: calc(var(--vh) * 48);
     background:#e5f2e0;
     border-bottom:3px solid #0a0c08;
     image-rendering: pixelated;
-    touch-action: none;
 }
 
-/* STEUERUNG */
-#buttons {
-    height: calc(var(--vh) * 30);
-    background: #1d3811;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    max-height: 33vh;
-}
-
-.btn-row {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-/* Auto-Scaling Buttons */
-.ctrl-btn {
-    width: calc(var(--vh) * 10);
-    height: calc(var(--vh) * 10);
-    font-size: calc(var(--vh) * 7);
-    border: 3px solid #000;
-    background: #7ef354;
-    border-radius: 12px;
-
-    display:flex;
-    justify-content:center;
-    align-items:center;
-
-    user-select:none;
-    touch-action: manipulation;
-}
-
-.ctrl-btn:active {
-    background: #57d336;
-}
-
-#center {
-    width: calc(var(--vh) * 10);
-    height: calc(var(--vh) * 10);
-    background: transparent;
-    border: none;
+/* CONTROL CANVAS */
+#ctrlCanvas {
+    width:100%;
+    height: calc(var(--vh) * 25);
+    background:#405138;
 }
 </style>
 </head>
 
 <body>
 
+<!-- FIX VH -->
 <script>
-/* --- Fix 1% Viewport Bug (wichtig für Handy!) --- */
 function fixVH() {
-    let vh = window.innerHeight * 0.01;
-    document.documentElement.style.setProperty("--vh", `${vh}px`);
+    document.documentElement.style.setProperty(
+        "--vh",
+        window.innerHeight * 0.01 + "px"
+    );
 }
 fixVH();
 window.addEventListener("resize", fixVH);
-window.addEventListener("orientationchange", () => setTimeout(fixVH, 300));
 </script>
 
 <div id="wrapper">
-
     <div id="scorebar">Score: 0 | Highscore: 0</div>
     <div id="divider"></div>
 
     <canvas id="gameCanvas"></canvas>
-
-    <div id="buttons">
-        <div class="btn-row">
-            <div class="ctrl-btn" id="up">⬆</div>
-        </div>
-        <div class="btn-row">
-            <div class="ctrl-btn" id="left">⬅</div>
-            <div class="ctrl-btn" id="center"></div>
-            <div class="ctrl-btn" id="right">➡</div>
-        </div>
-        <div class="btn-row">
-            <div class="ctrl-btn" id="down">⬇</div>
-        </div>
-    </div>
-
+    <canvas id="ctrlCanvas"></canvas>
 </div>
 
 <script>
-/* CANVAS */
-const canvas = document.getElementById("gameCanvas");
-const g = canvas.getContext("2d");
+/* ----------- GAME CANVAS ----------- */
+const gameCanvas = document.getElementById("gameCanvas");
+const g = gameCanvas.getContext("2d");
 
 function resizeGame() {
-    canvas.width = canvas.clientWidth;
-    canvas.height = canvas.clientHeight;
+    gameCanvas.width = gameCanvas.clientWidth;
+    gameCanvas.height = gameCanvas.clientHeight;
 }
 resizeGame();
-window.addEventListener("resize", resizeGame);
+window.addEventListener("resize", () => { resizeGame(); resizeCtrl(); });
 
 let tileCount = 20;
 let snakeX = 10, snakeY = 10;
@@ -176,13 +120,13 @@ updateScorebar();
 
 let speed = 7;
 
-/* MAIN LOOP */
+/* GAME LOOP */
 function gameLoop() {
     setTimeout(() => {
         requestAnimationFrame(gameLoop);
         update();
         draw();
-    }, 1000 / speed);
+    }, 1000/speed);
 }
 gameLoop();
 
@@ -191,6 +135,7 @@ function update() {
     snakeX += velocityX;
     snakeY += velocityY;
 
+    /* Borders WRAP */
     if (snakeX < 0) snakeX = tileCount - 1;
     if (snakeX >= tileCount) snakeX = 0;
     if (snakeY < 0) snakeY = tileCount - 1;
@@ -199,22 +144,25 @@ function update() {
     snake.push({ x: snakeX, y: snakeY });
     while (snake.length > snakeLength) snake.shift();
 
-    for (let i = 0; i < snake.length - 1; i++) {
-        if (snake[i].x === snakeX && snake[i].y === snakeY) {
+    /* COLLISION */
+    for (let i=0;i<snake.length-1;i++)
+        if(snake[i].x===snakeX && snake[i].y===snakeY)
             resetGame();
-        }
-    }
 
+    /* EAT FOOD */
     if (snakeX === foodX && snakeY === foodY) {
         snakeLength++;
         score++;
 
+        /* Update highscore */
         if (score > highscore) {
             highscore = score;
             localStorage.setItem("snakeHighscore", highscore);
         }
+
         updateScorebar();
 
+        /* New Food */
         foodX = Math.floor(Math.random() * tileCount);
         foodY = Math.floor(Math.random() * tileCount);
     }
@@ -223,17 +171,18 @@ function update() {
 /* DRAW */
 function draw() {
     const tileSize = Math.min(
-        canvas.clientWidth / tileCount,
-        canvas.clientHeight / tileCount
+        gameCanvas.clientWidth / tileCount,
+        gameCanvas.clientHeight / tileCount
     );
 
     const gap = tileSize * 0.12;
     const size = tileSize - gap * 2;
-    const radius = size * 0.18;
+    const radius = size * 0.15;
 
     g.fillStyle = "#c6ffb3";
-    g.fillRect(0, 0, canvas.width, canvas.height);
+    g.fillRect(0,0,gameCanvas.width,gameCanvas.height);
 
+    // Snake
     g.fillStyle = "#2e2e2e";
     snake.forEach(p => {
         g.beginPath();
@@ -247,8 +196,9 @@ function draw() {
         g.fill();
     });
 
+    // Food
     const foodSize = size * 0.7;
-    const foodRadius = foodSize * 0.2;
+    const foodRadius = foodSize * 0.15;
     const offset = (tileSize - foodSize) / 2;
 
     g.beginPath();
@@ -262,7 +212,7 @@ function draw() {
     g.fill();
 }
 
-/* RESET */
+/* RESET (Score bleibt stehen!) */
 function resetGame() {
     snakeX = 10;
     snakeY = 10;
@@ -271,41 +221,101 @@ function resetGame() {
     snake = [];
     snakeLength = 3;
 
-    updateScorebar(); // Score bleibt stehen!
+    /* Score NICHT zurücksetzen! */
+    updateScorebar();
 }
 
-/* TOUCH + PC-STEUERUNG */
-function startMove(nx, ny) {
-    if (velocityX === 0 && velocityY === 0 && (nx !== 0 || ny !== 0)) {
+/* ----------- CONTROLS ----------- */
+const ctrlCanvas = document.getElementById("ctrlCanvas");
+const c = ctrlCanvas.getContext("2d");
+
+function resizeCtrl() {
+    ctrlCanvas.width = ctrlCanvas.clientWidth;
+    ctrlCanvas.height = ctrlCanvas.clientHeight;
+    drawControls();
+}
+resizeCtrl();
+
+function drawArrow(x,y,size,angle){
+    c.save();
+    c.translate(x,y);
+    c.rotate(angle);
+
+    c.lineWidth=size*0.22;
+    c.lineJoin="round";
+    c.strokeStyle="#000";
+
+    c.beginPath();
+    c.moveTo(0,-size);
+    c.lineTo(-size*0.55,size*0.35);
+    c.lineTo(0,-size*0.1);
+    c.lineTo(size*0.55,size*0.35);
+    c.closePath();
+    c.stroke();
+
+    c.restore();
+}
+
+function drawControls(){
+    c.fillStyle="#c6ffb3";
+    c.fillRect(0,0,ctrlCanvas.width,ctrlCanvas.height);
+
+    let cx=ctrlCanvas.width/2;
+    let cy=ctrlCanvas.height/2;
+
+    let size=ctrlCanvas.height*0.18;
+
+    drawArrow(cx, cy-size*1.3, size, 0);
+    drawArrow(cx, cy+size*1.3, size, Math.PI);
+    drawArrow(cx-size*1.9, cy, size, -Math.PI/2);
+    drawArrow(cx+size*1.9, cy, size, Math.PI/2);
+}
+
+/* TOUCH CONTROL + Score Reset nur bei NEUEM Spiel */
+ctrlCanvas.addEventListener("touchstart", e=>{
+    let r=ctrlCanvas.getBoundingClientRect();
+    let x=e.touches[0].clientX-r.left;
+    let y=e.touches[0].clientY-r.top;
+
+    let cx=ctrlCanvas.width/2;
+    let cy=ctrlCanvas.height/2;
+
+    let oldVX = velocityX;
+    let oldVY = velocityY;
+
+    if(y<cy-ctrlCanvas.height*0.18 && velocityY!==1)
+        velocityX=0,velocityY=-1;
+    else if(y>cy+ctrlCanvas.height*0.18 && velocityY!==-1)
+        velocityX=0,velocityY=1;
+    else if(x<cx-ctrlCanvas.width*0.18 && velocityX!==1)
+        velocityX=-1,velocityY=0;
+    else if(x>cx+ctrlCanvas.width*0.18 && velocityX!==-1)
+        velocityX=1,velocityY=0;
+
+    // Nur wenn Snake vorher stillstand → Score neu
+    if (oldVX===0 && oldVY===0 && (velocityX!==0 || velocityY!==0)) {
         score = 0;
         updateScorebar();
     }
-    velocityX = nx;
-    velocityY = ny;
-}
-
-document.getElementById("up").addEventListener("click", () => {
-    if (velocityY !== 1) startMove(0, -1);
-});
-document.getElementById("down").addEventListener("click", () => {
-    if (velocityY !== -1) startMove(0, 1);
-});
-document.getElementById("left").addEventListener("click", () => {
-    if (velocityX !== 1) startMove(-1, 0);
-});
-document.getElementById("right").addEventListener("click", () => {
-    if (velocityX !== -1) startMove(1, 0);
 });
 
-document.addEventListener("keydown", e => {
-    if (e.key === "ArrowUp" && velocityY !== 1) startMove(0, -1);
-    if (e.key === "ArrowDown" && velocityY !== -1) startMove(0, 1);
-    if (e.key === "ArrowLeft" && velocityX !== 1) startMove(-1, 0);
-    if (e.key === "ArrowRight" && velocityX !== -1) startMove(1, 0);
+/* KEYBOARD CONTROL */
+document.addEventListener("keydown",e=>{
+    let oldVX = velocityX;
+    let oldVY = velocityY;
+
+    if(e.key==="ArrowUp"&&velocityY!==1)velocityX=0,velocityY=-1;
+    if(e.key==="ArrowDown"&&velocityY!==-1)velocityX=0,velocityY=1;
+    if(e.key==="ArrowLeft"&&velocityX!==1)velocityX=-1,velocityY=0;
+    if(e.key==="ArrowRight"&&velocityX!==-1)velocityX=1,velocityY=0;
+
+    // Score nur zu Beginn eines neuen Spiels setzen
+    if (oldVX===0 && oldVY===0 && (velocityX!==0 || velocityY!==0)) {
+        score = 0;
+        updateScorebar();
+    }
 });
 </script>
 
 </body>
 </html>
-
-
